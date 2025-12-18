@@ -13,14 +13,17 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
+
+    "baseUrl": ".",                    // ✅ ADD THIS
+    "paths": {
+      "@/*": ["./*"]                  // ✅ Path alias works now
+    },
+
     "plugins": [
       {
         "name": "next"
       }
-    ],
-    "paths": {
-      "@/*": ["./*"]
-    }
+    ]
   },
   "include": [
     "next-env.d.ts",
