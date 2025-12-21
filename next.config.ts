@@ -4,9 +4,7 @@ const nextConfig: NextConfig = {
   productionBrowserSourceMaps: false,
   generateEtags: false,
 
-  experimental: {
-    turbo: false,   // ❗ TURN OFF T U R B O P A C K
-  },
+  // removed unsupported `turbo` experimental flag (caused TS validation error)
 };
 
 export default nextConfig;
