@@ -72,7 +72,7 @@ export default function FocusExercisesPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 mb-6">
+        <div className="grid grid-cols-2 gap-3 mb-6">
           {allExercises.map((ex, index) => {
             const active = chosenExercises.includes(ex);
             return (

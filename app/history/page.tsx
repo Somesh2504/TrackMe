@@ -5,11 +5,21 @@ import { supabase } from "../../lib/superbaseClient";
 import Navbar from "@/app/components/Navbar";
 import { motion } from "framer-motion";
 
+type RepEntry = {
+  weight: number;
+  count: number;
+};
+
+type Exercise = {
+  name: string;
+  reps?: RepEntry[];
+};
+
 type Workout = {
   id: string;
   focus: string;
   created_at: string;
-  exercises?: { name: string; reps?: { weight: number; count: number }[] }[];
+  exercises?: Exercise[];
 };
 
 export default function HistoryPage() {
@@ -20,6 +30,7 @@ export default function HistoryPage() {
   useEffect(() => {
     async function load() {
       setLoading(true);
+
       const { data, error } = await supabase
         .from("workout")
         .select("*")
@@ -31,6 +42,7 @@ export default function HistoryPage() {
       } else {
         setData(data as Workout[]);
       }
+
       setLoading(false);
     }
 
@@ -47,18 +59,27 @@ export default function HistoryPage() {
           </p>
           <h1 className="text-3xl font-bold">Previous workouts</h1>
           <p className="text-slate-300 text-sm">
-            Tap a day to review what you lifted. Stored securely via Supabase.
+            Review exactly what you lifted — weight × reps.
           </p>
         </div>
 
         <div className="space-y-4">
-          {loading && <p className="text-center text-slate-400">Loading...</p>}
+          {loading && (
+            <p className="text-center text-slate-400">Loading...</p>
+          )}
+
           {error && (
-            <p className="text-center text-red-400 font-semibold">{error}</p>
+            <p className="text-center text-red-400 font-semibold">
+              {error}
+            </p>
           )}
+
           {!loading && !error && data.length === 0 && (
-            <p className="text-center text-slate-400">No workouts found yet.</p>
+            <p className="text-center text-slate-400">
+              No workouts found yet.
+            </p>
           )}
+
           {!loading &&
             !error &&
             data.map((workout, index) => (
@@ -69,7 +90,8 @@ export default function HistoryPage() {
                 transition={{ delay: index * 0.04 }}
                 className="rounded-2xl border border-white/10 bg-white/5 p-4 shadow-lg shadow-black/30"
               >
-                <div className="flex items-center justify-between">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-3">
                   <div>
                     <p className="text-xs text-emerald-200/80 uppercase tracking-[0.18em]">
                       {workout.focus}
@@ -83,24 +105,46 @@ export default function HistoryPage() {
                   </span>
                 </div>
 
+                {/* Exercises */}
                 {workout.exercises?.length ? (
-                  <ul className="mt-3 text-sm text-slate-300 space-y-1">
-                    {workout.exercises.slice(0, 3).map((ex, i) => (
-                      <li key={`${workout.id}-${i}`} className="flex justify-between">
-                        <span>{ex.name}</span>
-                        <span className="text-slate-400">
-                          {ex.reps?.length ?? 0} rep(s)
-                        </span>
-                      </li>
+                  <div className="space-y-3">
+                    {workout.exercises.map((ex, i) => (
+                      <div
+                        key={`${workout.id}-${i}`}
+                        className="rounded-xl border border-white/10 bg-slate-900/60 p-3"
+                      >
+                        <p className="font-semibold text-white mb-1">
+                          {ex.name}
+                        </p>
+
+                        {ex.reps?.length ? (
+                          <ul className="text-sm text-slate-300 space-y-1">
+                            {ex.reps.map((r, idx) => (
+                              <li
+                                key={idx}
+                                className="flex justify-between"
+                              >
+                                <span>
+                                  {r.weight} kg
+                                </span>
+                                <span className="text-slate-400">
+                                  × {r.count}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="text-xs text-slate-400">
+                            No reps logged
+                          </p>
+                        )}
+                      </div>
                     ))}
-                    {workout.exercises.length > 3 && (
-                      <li className="text-xs text-slate-400">
-                        +{workout.exercises.length - 3} more
-                      </li>
-                    )}
-                  </ul>
+                  </div>
                 ) : (
-                  <p className="text-sm text-slate-400 mt-2">No exercises logged.</p>
+                  <p className="text-sm text-slate-400">
+                    No exercises logged.
+                  </p>
                 )}
               </motion.div>
             ))}

@@ -1,17 +1,17 @@
-// app/newday/focus/log/page.tsx
 "use client";
 
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import Navbar from "@/app/components/Navbar";
 
-type SetEntry = {
+type RepEntry = {
   weight: string;
-  reps: string;
+  count: string;
 };
 
 export default function LogWorkoutPage() {
   const searchParams = useSearchParams();
+
   const parts = (searchParams.get("parts") ?? "")
     .split(",")
     .map((p) => p.trim())
@@ -22,45 +22,56 @@ export default function LogWorkoutPage() {
     .map((e) => e.trim())
     .filter(Boolean);
 
-  const [data, setData] = useState<Record<string, SetEntry[]>>(() => {
-    const initial: Record<string, SetEntry[]> = {};
-    exercises.forEach((ex) => {
-      initial[ex] = [];
-    });
-    return initial;
-  });
+  // reps entered per exercise
+  const [repCounts, setRepCounts] = useState<Record<string, string>>({});
+  // weight + count per rep
+  const [repsData, setRepsData] = useState<Record<string, RepEntry[]>>({});
 
-  function addSet(exName: string) {
-    setData((prev) => ({
+  function setRepsForExercise(ex: string) {
+    const count = Number(repCounts[ex]);
+    if (!count || count <= 0) {
+      alert("Enter a valid number of reps");
+      return;
+    }
+
+    setRepsData((prev) => ({
       ...prev,
-      [exName]: [...(prev[exName] || []), { weight: "", reps: "" }],
+      [ex]: Array.from({ length: count }, () => ({
+        weight: "",
+        count: "",
+      })),
     }));
   }
 
-  function updateSet(exName: string, index: number, field: "weight" | "reps", value: string) {
-    setData((prev) => {
-      const sets = [...(prev[exName] || [])];
-      sets[index] = { ...sets[index], [field]: value };
-      return { ...prev, [exName]: sets };
+  function updateRep(
+    ex: string,
+    index: number,
+    field: "weight" | "count",
+    value: string
+  ) {
+    setRepsData((prev) => {
+      const arr = [...(prev[ex] || [])];
+      arr[index] = { ...arr[index], [field]: value };
+      return { ...prev, [ex]: arr };
     });
   }
 
   async function handleSubmit() {
-    // basic validation
-    const payloadExercises = Object.entries(data)
-      .map(([name, sets]) => ({
-        name,
-        reps: sets
-          .filter((s) => s.weight && s.reps)
-          .map((s) => ({
-            weight: Number(s.weight),
-            count: Number(s.reps),
-          })),
-      }))
-      .filter((e) => e.reps.length > 0);
+    const payloadExercises = exercises
+      .map((ex) => {
+        const reps = (repsData[ex] || [])
+          .filter((r) => r.weight && r.count)
+          .map((r) => ({
+            weight: Number(r.weight),
+            count: Number(r.count),
+          }));
+
+        return reps.length > 0 ? { name: ex, reps } : null;
+      })
+      .filter(Boolean);
 
     if (payloadExercises.length === 0) {
-      alert("Please add at least one set with weight and reps.");
+      alert("Please log at least one exercise with weight and count.");
       return;
     }
 
@@ -73,16 +84,14 @@ export default function LogWorkoutPage() {
     try {
       const res = await fetch("/api/workouts", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(workout),
       });
 
       const result = await res.json();
 
       if (result.success) {
-        alert("Workout saved to Supabase! 🏋️‍♂️");
+        alert("Workout saved successfully 🏋️‍♂️");
       } else {
         alert("Error saving workout: " + result.error);
       }
@@ -108,77 +117,84 @@ export default function LogWorkoutPage() {
     <main className="min-h-screen text-white pb-16">
       <Navbar />
       <section className="mx-auto max-w-xl px-5">
-        <div className="mt-6 mb-4 space-y-2 text-center">
+        <div className="mt-6 mb-4 text-center space-y-2">
           <p className="text-xs uppercase tracking-[0.25em] text-emerald-200/80">
             {parts.join(" · ")}
           </p>
-          <h1 className="text-3xl font-bold">Log weights & reps</h1>
-          <p className="text-slate-300 text-sm">
-            For each exercise, add sets with weight (kg) and reps, then save once.
-          </p>
+          <h1 className="text-3xl font-bold">Log reps & weights</h1>
         </div>
 
         <div className="space-y-6 mb-6">
           {exercises.map((ex) => (
             <div
               key={ex}
-              className="rounded-2xl border border-white/10 bg-white/5 p-4 shadow-lg shadow-black/30"
+              className="rounded-2xl border border-white/10 bg-white/5 p-4"
             >
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-lg font-semibold">{ex}</h2>
+              <h2 className="text-lg font-semibold mb-3">{ex}</h2>
+
+              {/* STEP 1: enter number of reps */}
+              <div className="flex gap-2 mb-4">
+                <input
+                  type="number"
+                  min={1}
+                  placeholder="Number of reps"
+                  value={repCounts[ex] || ""}
+                  onChange={(e) =>
+                    setRepCounts((prev) => ({
+                      ...prev,
+                      [ex]: e.target.value,
+                    }))
+                  }
+                  className="flex-1 rounded-lg bg-slate-900 p-2 text-sm text-white"
+                />
                 <button
-                  type="button"
-                  onClick={() => addSet(ex)}
-                  className="rounded-lg bg-emerald-500 px-3 py-1 text-xs font-semibold text-slate-950 shadow-md shadow-emerald-500/30"
+                  onClick={() => setRepsForExercise(ex)}
+                  className="rounded-lg bg-emerald-500 px-4 text-sm font-semibold text-slate-950"
                 >
-                  + Add set
+                  Set
                 </button>
               </div>
 
-              {data[ex]?.length === 0 && (
-                <p className="text-xs text-slate-300">
-                  No sets yet. Tap &ldquo;+ Add set&rdquo; to begin.
-                </p>
-              )}
+              {/* STEP 2: weight + count per rep */}
+              {repsData[ex] && (
+                <div className="space-y-2">
+                  {repsData[ex].map((rep, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center gap-2 rounded-xl bg-slate-900/60 p-2"
+                    >
+                      <span className="text-sm w-14">Rep {idx + 1}</span>
 
-              <div className="space-y-2">
-                {data[ex]?.map((set, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-2 rounded-xl border border-white/10 bg-slate-900/60 px-3 py-2"
-                  >
-                    <span className="text-xs text-slate-300 w-10">
-                      Set {index + 1}
-                    </span>
-                    <input
-                      type="number"
-                      value={set.weight}
-                      onChange={(e) =>
-                        updateSet(ex, index, "weight", e.target.value)
-                      }
-                      placeholder="Weight (kg)"
-                      min={1}
-                      className="flex-1 rounded-lg border border-white/10 bg-slate-950 p-2 text-xs text-white placeholder:text-slate-500"
-                    />
-                    <input
-                      type="number"
-                      value={set.reps}
-                      onChange={(e) =>
-                        updateSet(ex, index, "reps", e.target.value)
-                      }
-                      placeholder="Reps"
-                      min={1}
-                      className="w-20 rounded-lg border border-white/10 bg-slate-950 p-2 text-xs text-white placeholder:text-slate-500"
-                    />
-                  </div>
-                ))}
-              </div>
+                      <input
+                        type="number"
+                        min={1}
+                        placeholder="kg"
+                        value={rep.weight}
+                        onChange={(e) =>
+                          updateRep(ex, idx, "weight", e.target.value)
+                        }
+                        className="w-24 rounded-lg bg-slate-950 p-2 text-sm text-right text-white"
+                      />
+
+                      <input
+                        type="number"
+                        min={1}
+                        placeholder="count"
+                        value={rep.count}
+                        onChange={(e) =>
+                          updateRep(ex, idx, "count", e.target.value)
+                        }
+                        className="w-20 rounded-lg bg-slate-950 p-2 text-sm text-right text-white"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>
 
         <button
-          type="button"
           onClick={handleSubmit}
           className="w-full rounded-xl bg-emerald-500 py-3 text-sm font-semibold text-slate-950 shadow-lg shadow-emerald-500/30"
         >

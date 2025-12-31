@@ -126,7 +126,7 @@ async function handleSaveWorkout() {
     } else {
       alert("Error saving workout: " + result.error);
     }
-  } catch (error:any) {
+  } catch (error: any) {
     alert("Network error: " + error.message);
   }
 }
