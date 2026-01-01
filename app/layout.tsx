@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -17,16 +17,25 @@ export const metadata: Metadata = {
   description:
     "Log workouts, track weights, and see your strength progress with TrackMe.",
 
-  // ✅ PWA-specific metadata (CORRECT WAY)
+  // ✅ PWA-specific metadata
   manifest: "/manifest.json",
-  themeColor: "#000000",
-
-  // Optional but recommended
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "TrackMe",
   },
+  icons: {
+    apple: "/Icon.jpeg",
+    icon: "/Icon.jpeg",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#000000",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({
