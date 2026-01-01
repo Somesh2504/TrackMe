@@ -2,14 +2,16 @@
   "name": "TrackMe | Gym Weight Tracker",
   "short_name": "TrackMe",
   "description": "Log workouts, track weights, and see your strength progress with TrackMe.",
-  "start_url": "/",
+  "start_url": "/?utm_source=pwa",
   "scope": "/",
   "display": "standalone",
-  "display_override": ["window-controls-overlay", "standalone"],
+  "display_override": ["standalone", "window-controls-overlay"],
   "orientation": "portrait-primary",
   "background_color": "#0f172a",
   "theme_color": "#000000",
   "categories": ["health", "fitness", "lifestyle"],
+  "dir": "ltr",
+  "lang": "en",
   "icons": [
     {
       "src": "/Icon.jpeg",
@@ -36,7 +38,7 @@
       "purpose": "maskable"
     }
   ],
-  "screenshots": [],
-  "prefer_related_applications": false
+  "prefer_related_applications": false,
+  "shortcuts": []
 }
   
