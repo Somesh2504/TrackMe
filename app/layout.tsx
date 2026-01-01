@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     "Log workouts, track weights, and see your strength progress with TrackMe.",
 
   // ✅ PWA-specific metadata
-  manifest: "/manifest.json",
+  manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
