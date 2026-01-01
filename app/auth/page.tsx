@@ -48,10 +48,15 @@ export default function AuthPage() {
     try {
       setLoadingGoogle(true);
 
+      // Use environment variable if available, otherwise use current origin
+      const redirectUrl =
+        process.env.NEXT_PUBLIC_SITE_URL ||
+        (typeof window !== "undefined" ? window.location.origin : "");
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/newday`,
+          redirectTo: `${redirectUrl}/auth/callback?next=/newday`,
         },
       });
 
@@ -59,7 +64,7 @@ export default function AuthPage() {
         throw error;
       }
 
-      // User will be redirected to Google then back to /newday
+      // User will be redirected to Google then back to /auth/callback
     } catch (err: any) {
       alert("Google sign-in error: " + err.message);
       setLoadingGoogle(false);
