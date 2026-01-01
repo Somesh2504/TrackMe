@@ -13,6 +13,7 @@ export default function InstallPrompt() {
     useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [showManualInstall, setShowManualInstall] = useState(false);
 
   useEffect(() => {
     // Check if app is already installed
@@ -21,7 +22,7 @@ export default function InstallPrompt() {
       return;
     }
 
-    // Check if running as standalone (already installed)
+    // Check if running as standalone (iOS)
     if ((window.navigator as any).standalone === true) {
       setIsInstalled(true);
       return;
@@ -36,62 +37,97 @@ export default function InstallPrompt() {
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
 
-    // Check if already installed after a delay
-    const checkInstalled = setTimeout(() => {
-      if (window.matchMedia("(display-mode: standalone)").matches) {
-        setIsInstalled(true);
-        setShowPrompt(false);
+    // Show manual install option after 2 seconds if beforeinstallprompt didn't fire
+    const timer = setTimeout(() => {
+      if (!deferredPrompt && !isInstalled) {
+        setShowManualInstall(true);
       }
-    }, 1000);
+    }, 2000);
 
     return () => {
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-      clearTimeout(checkInstalled);
+      clearTimeout(timer);
     };
-  }, []);
+  }, [deferredPrompt, isInstalled]);
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) {
-      // Fallback for browsers that don't support beforeinstallprompt
-      // Show manual installation instructions
-      alert(
-        "To install this app:\n\n" +
-          "Chrome/Edge: Click the install icon (➕) in the address bar\n" +
-          "Safari (iOS): Tap Share → Add to Home Screen\n" +
-          "Firefox: Menu → Install"
-      );
+      // Fallback: Show manual installation instructions
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      const isAndroid = /Android/.test(navigator.userAgent);
+      const isChrome = /Chrome/.test(navigator.userAgent);
+      const isEdge = /Edg/.test(navigator.userAgent);
+      const isFirefox = /Firefox/.test(navigator.userAgent);
+
+      let instructions = "To install this app:\n\n";
+
+      if (isIOS) {
+        instructions += "1. Tap the Share button (square with arrow)\n";
+        instructions += "2. Scroll down and tap 'Add to Home Screen'\n";
+        instructions += "3. Tap 'Add' in the top right";
+      } else if (isAndroid) {
+        if (isChrome || isEdge) {
+          instructions += "1. Tap the menu (3 dots) in the browser\n";
+          instructions += "2. Tap 'Install app' or 'Add to Home screen'\n";
+          instructions += "3. Confirm installation";
+        } else {
+          instructions += "1. Tap the menu (3 dots)\n";
+          instructions += "2. Look for 'Install' or 'Add to Home screen'\n";
+          instructions += "3. Follow the prompts";
+        }
+      } else if (isChrome || isEdge) {
+        instructions += "1. Look for the install icon (➕) in the address bar\n";
+        instructions += "2. Click it to install the app\n";
+        instructions += "Or go to Menu → Install";
+      } else if (isFirefox) {
+        instructions += "1. Click the menu (3 lines)\n";
+        instructions += "2. Click 'Install'";
+      } else {
+        instructions += "Look for an install option in your browser's menu";
+      }
+
+      alert(instructions);
       return;
     }
 
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
+    try {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
 
-    if (outcome === "accepted") {
-      setShowPrompt(false);
-      setIsInstalled(true);
+      if (outcome === "accepted") {
+        setShowPrompt(false);
+        setIsInstalled(true);
+        setShowManualInstall(false);
+      }
+
+      setDeferredPrompt(null);
+    } catch (err) {
+      console.error("Install error:", err);
     }
-
-    setDeferredPrompt(null);
   };
 
   const handleDismiss = () => {
     setShowPrompt(false);
-    // Don't show again for this session
-    sessionStorage.setItem("pwa-install-dismissed", "true");
+    setShowManualInstall(true); // Show manual install button instead
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("pwa-install-dismissed", "true");
+    }
   };
 
-  // Don't show if already installed or dismissed this session
-  if (
-    isInstalled ||
-    !showPrompt ||
-    sessionStorage.getItem("pwa-install-dismissed") === "true"
-  ) {
+  // Don't show anything if already installed
+  if (isInstalled) {
     return null;
   }
 
-  return (
-    <AnimatePresence>
-      {showPrompt && (
+  // Check if dismissed (only in browser)
+  const isDismissed =
+    typeof window !== "undefined" &&
+    sessionStorage.getItem("pwa-install-dismissed") === "true";
+
+  // Show full prompt if beforeinstallprompt fired and not dismissed
+  if (showPrompt && !isDismissed) {
+    return (
+      <AnimatePresence>
         <motion.div
           initial={{ y: 100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -144,8 +180,40 @@ export default function InstallPrompt() {
             </div>
           </div>
         </motion.div>
-      )}
-    </AnimatePresence>
-  );
-}
+      </AnimatePresence>
+    );
+  }
 
+  // Show compact install button if manual install should be shown
+  if (showManualInstall || isDismissed) {
+    return (
+      <motion.div
+        initial={{ y: 100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        className="fixed bottom-4 left-4 right-4 z-50 md:left-auto md:right-4 md:w-auto"
+      >
+        <button
+          onClick={handleInstallClick}
+          className="bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium px-4 py-2 rounded-lg shadow-lg transition-colors flex items-center gap-2"
+        >
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"
+            />
+          </svg>
+          Install App
+        </button>
+      </motion.div>
+    );
+  }
+
+  return null;
+}

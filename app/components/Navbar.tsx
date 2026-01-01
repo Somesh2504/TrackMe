@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { supabase } from "../../lib/superbaseClient";
 import { useRouter, usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
 const navItems = [
@@ -11,6 +11,85 @@ const navItems = [
   { href: "/history", label: "History" },
   { href: "/profile", label: "Profile" },
 ];
+
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+}
+
+function InstallButton() {
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [isInstalled, setIsInstalled] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    if (typeof window === "undefined") return;
+
+    // Check if installed
+    const checkInstalled = () => {
+      if (window.matchMedia("(display-mode: standalone)").matches) {
+        setIsInstalled(true);
+        return true;
+      }
+      return false;
+    };
+
+    if (checkInstalled()) return;
+
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
+    };
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstall = async () => {
+    if (!deferredPrompt) {
+      alert(
+        "To install: Look for the install icon (➕) in your browser's address bar, or check the browser menu for 'Install' option."
+      );
+      return;
+    }
+
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === "accepted") {
+      setIsInstalled(true);
+    }
+    setDeferredPrompt(null);
+  };
+
+  if (!mounted || isInstalled) return null;
+
+  return (
+    <button
+      onClick={handleInstall}
+      className="ml-1 px-3 py-2 rounded-full bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold transition flex items-center gap-1.5"
+      title="Install App"
+    >
+      <svg
+        className="w-4 h-4"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"
+        />
+      </svg>
+      Install
+    </button>
+  );
+}
 
 export default function Navbar() {
   const router = useRouter();
@@ -56,6 +135,7 @@ export default function Navbar() {
             );
           })}
 
+          <InstallButton />
           <button
             onClick={logout}
             className="ml-1 px-3 py-2 rounded-full bg-emerald-500 text-slate-950 font-semibold shadow-lg shadow-emerald-500/30 hover:shadow-emerald-400/40 transition"
