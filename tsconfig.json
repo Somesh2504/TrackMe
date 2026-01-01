@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ES2017",
     "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": true,
+    "allowJs": false,
     "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
@@ -14,16 +14,15 @@
     "jsx": "react-jsx",
     "incremental": true,
 
-    "baseUrl": ".",                    // ✅ ADD THIS
+    "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"]                  // ✅ Path alias works now
+      "@/*": ["./*"]
     },
 
     "plugins": [
-      {
-        "name": "next"
-      }
-    ]
+      { "name": "next" }
+    ],
+    "types": []
   },
   "include": [
     "next-env.d.ts",
