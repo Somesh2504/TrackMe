@@ -16,13 +16,24 @@ export const metadata: Metadata = {
   title: "TrackMe | Gym Weight Tracker",
   description:
     "Log workouts, track weights, and see your strength progress with TrackMe.",
+
+  // ✅ PWA-specific metadata (CORRECT WAY)
+  manifest: "/manifest.json",
+  themeColor: "#000000",
+
+  // Optional but recommended
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "TrackMe",
+  },
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="en">
       <body
